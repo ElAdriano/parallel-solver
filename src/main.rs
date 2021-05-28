@@ -1,7 +1,7 @@
 use std::env;
 use std::process;
 
-mod reader;
+mod file_manager;
 mod threads;
 mod jacobi;
 
@@ -24,24 +24,24 @@ fn main() {
     }
 
     // reading coefficients_matrix and equations results data
-    let coefficients_matrix: Vec<Vec<f32>> = reader::read(&args[1]);
-    let y_values_vector: Vec<Vec<f32>> = reader::read(&args[2]);
+    let coefficients_matrix: Vec<Vec<f32>> = file_manager::read(&args[1]);
+    let y_values_vector: Vec<Vec<f32>> = file_manager::read(&args[2]);
     let threads_number: i32 = args[3].trim().parse().unwrap();
 
     // data validation
-    let coefficients_matrix_correct = reader::validate_coefficients_matrix(&coefficients_matrix);
+    let coefficients_matrix_correct = file_manager::validate_coefficients_matrix(&coefficients_matrix);
     if !coefficients_matrix_correct{
         process::exit(-2);
     }
 
-    let results_vector_correct = reader::validate_results_vector(coefficients_matrix.len() as i32, &y_values_vector);
+    let results_vector_correct = file_manager::validate_results_vector(coefficients_matrix.len() as i32, &y_values_vector);
     if !results_vector_correct{
         process::exit(-2);
     }
 
     // creating history for results with initial values
     let mut x_values = Vec::new();
-    let iterations_number: i32 = 20;
+    let iterations_number: i32 = args[4].trim().parse().unwrap();
 
     for _it_num in 0..iterations_number{
         if _it_num == 0{
@@ -60,20 +60,22 @@ fn main() {
         }
     }
 
+    let output_file_name: &str = &args[5];
+
     // find solutions
-    threads::find_solutions(coefficients_matrix, y_values_vector, x_values, iterations_number, threads_number);
+    threads::find_solutions(coefficients_matrix, y_values_vector, x_values, iterations_number, threads_number, output_file_name);
 
     // end program
     process::exit(0);
 }
 
 fn validate_input(args: &Vec<String>) -> bool{
-    if args.len() < 4{
-        println!("There was too less arguments.\nExample for starting program: '.\\main.exe file_with_coefficients_matrix file_with_right_size number_of_threads'");
+    if args.len() < 6{
+        println!("There was too less arguments.\nExample for starting program: \n'.\\main.exe file_with_coefficients_matrix file_with_y_vector number_of_threads max_iterations_number output_file_name'");
         return false;
     }
-    if args.len() > 4{
-        println!("There was too many arguments.\nExample for starting program: '.\\main.exe file_with_coefficients_matrix file_with_right_size number_of_threads'");
+    if args.len() > 6{
+        println!("There was too many arguments.\nExample for starting program: \n'.\\main.exe file_with_coefficients_matrix file_with_y_vector number_of_threads max_iterations_number output_file_name'");
         return false;
     }
     return true;

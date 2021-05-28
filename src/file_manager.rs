@@ -3,7 +3,6 @@ use std::process;
 
 // code -2 means that data are incorrect
 pub fn read(file_name: &str) -> Vec<Vec<f32>> {
-    //println!("File {filename} content is:\n", filename=file_name);
     let is_file_existing = std::path::Path::new(file_name).exists();
 
     if !is_file_existing{
@@ -18,7 +17,6 @@ pub fn read(file_name: &str) -> Vec<Vec<f32>> {
     }
 
     let rows : Vec<&str> = file_content.split('\n').collect();
-    //println!("rows.len(): {}", rows.len());
 
     if rows.len() == 0 {
         process::exit(-2);
@@ -50,6 +48,22 @@ pub fn read(file_name: &str) -> Vec<Vec<f32>> {
         matrix.push(vector_row);
     }
     return matrix;
+}
+
+pub fn write(file_name: &str, content: &Vec<f32>){
+    let mut file_content: String = "".to_string();
+    for i in 0..content.len(){
+        file_content += &(content[i].to_string() + "\n");
+    }
+
+    let saving_result = fs::write(file_name, file_content);
+    match saving_result{
+        Ok(_file) => { println!("Saving results to file ended successfully :)"); },
+        Err(_error) => { 
+            println!("An error occurred while saving results to file. That's all I know :("); 
+            process::exit(-2);
+        }
+    }
 }
 
 pub fn validate_coefficients_matrix(coefficients_matrix: &Vec<Vec<f32>>) -> bool{

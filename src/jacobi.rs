@@ -10,13 +10,12 @@ pub fn solve_system_of_equations(
     all_threads_number: i32,
     x_results_mutex: Arc< Mutex< Vec<Vec<f32>> > >
 ){
-
     // preparing necessary data : matrix M and vector N
     let n_diagonal: Vec<f32> = prepare_n_vector(coefficients_matrix);
     let m_matrix: Vec<Vec<f32>> = prepare_m_matrix(coefficients_matrix, &n_diagonal);
 
-    for iteration_number in 1..iterations_number{      // iterations loop
-        let mut row_index = thread_id;  //
+    for iteration_number in 1..iterations_number{
+        let mut row_index = thread_id;
         while row_index < (coefficients_matrix.len() as i32) {
             let mut x_results = x_results_mutex.lock().unwrap();
 
@@ -34,8 +33,8 @@ pub fn solve_system_of_equations(
         }
     }
 
-    let results = x_results_mutex.lock().unwrap();
-    println!("Iteration nr {:?},\nValues: {:?}\n", iterations_number, results[(iterations_number - 1) as usize]);
+    //let results = x_results_mutex.lock().unwrap();
+    //println!("Iteration nr {:?},\nValues: {:?}\n", iterations_number, results[(iterations_number - 1) as usize]);
 }
 
 fn can_start_next_iteration(current_iteration_results: &Vec<f32>) -> bool{
