@@ -39,6 +39,11 @@ fn main() {
         process::exit(-2);
     }
 
+    if threads_number < 1 || threads_number > 4 {
+        println!("Invalid number of threads [1-4]. Given number was {:?}", threads_number);
+        process::exit(-2);
+    }
+
     // creating history for results with initial values
     let mut x_values = Vec::new();
     let iterations_number: i32 = args[4].trim().parse().unwrap();
