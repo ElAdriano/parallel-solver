@@ -4,6 +4,7 @@ use std::sync::Mutex;
 use std::sync::Barrier;
 
 use jacobi;
+use gauss_seidel;
 use file_manager;
 
 pub fn find_solutions(
@@ -12,9 +13,10 @@ pub fn find_solutions(
     x_values: Vec<Vec<f32>>, 
     iterations_number: i32,
     threads_number: i32,
-    output_file_name: &str
+    output_file_name: &str,
+    solving_method: i32
 ){
-    create_threads_and_start_solving(coefficients_matrix, y_values_vector, x_values, iterations_number, threads_number, output_file_name);
+    create_threads_and_start_solving(coefficients_matrix, y_values_vector, x_values, iterations_number, threads_number, output_file_name, solving_method);
 }
 
 fn create_threads_and_start_solving(
@@ -23,7 +25,8 @@ fn create_threads_and_start_solving(
     x_values: Vec<Vec<f32>>, 
     iterations_number: i32,
     threads_number: i32,
-    output_file_name: &str
+    output_file_name: &str,
+    solving_method: i32
 ){
     let mut created_threads = vec![];
 
@@ -44,7 +47,11 @@ fn create_threads_and_start_solving(
         let barrier_copy = thread_barrier.clone();
 
         let new_thread = threads_builder.spawn(move || {
-            jacobi::solve_system_of_equations(&a_matrix, &y_vector, iterations_number, i, threads_number, arc_mutex_clone); // borrowing copied data to other threads (any other thread has no rights to borrowed data)
+            if solving_method == 0{
+                jacobi::solve_system_of_equations(&a_matrix, &y_vector, iterations_number, i, threads_number, arc_mutex_clone); // borrowing copied data to other threads (any other thread has no rights to borrowed data)
+            } else {
+                gauss_seidel::solve_system_of_equations(&a_matrix, &y_vector, iterations_number, i, threads_number, arc_mutex_clone); // borrowing copied data to other threads (any other thread has no rights to borrowed data)
+            }
             barrier_copy.wait(); // wait for other siblings
         }).unwrap();
         created_threads.push(new_thread);

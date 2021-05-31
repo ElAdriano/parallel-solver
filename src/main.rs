@@ -4,6 +4,7 @@ use std::process;
 mod file_manager;
 mod threads;
 mod jacobi;
+mod gauss_seidel;
 
 /**
  * Main function
@@ -13,6 +14,14 @@ mod jacobi;
  * Code |  0 | Program executed properly
  * Code | -1 | Incorrect number of arguments
  * Code | -2 | An error occurred while reading file
+ * 
+ * 
+ * Build command: "rustc main.rs" -> That's gonna compile all *.rs files
+ * Start command: ".\main.exe coefficients.txt y_values.txt number_of_threads iterations_number output_file_name solving_method"
+ * Important things
+ * ================
+ * "solving_method" - should be equal "jacobi" or "gauss", other string values will be interpreted as invalid
+ * "number_of_threads" - this value is limited to 4 threads, because development machine could start just 4 threads.
  */
 fn main() {
     // collecting all input arguments
@@ -66,21 +75,32 @@ fn main() {
     }
 
     let output_file_name: &str = &args[5];
+    let solving_method: &str = &args[6];
 
-    // find solutions
-    threads::find_solutions(coefficients_matrix, y_values_vector, x_values, iterations_number, threads_number, output_file_name);
+    if solving_method.to_string() == "jacobi".to_string(){
+        // find solutions
+        threads::find_solutions(coefficients_matrix, y_values_vector, x_values, iterations_number, threads_number, output_file_name, 0);
+    } 
+    else if solving_method.to_string() == "gauss".to_string(){
+        // find solutions
+        threads::find_solutions(coefficients_matrix, y_values_vector, x_values, iterations_number, threads_number, output_file_name, 1);
+    }
+    else {
+        println!("Entered invalid method to find solutions. This argument should be ");
+        process::exit(-2);
+    }
 
     // end program
     process::exit(0);
 }
 
 fn validate_input(args: &Vec<String>) -> bool{
-    if args.len() < 6{
-        println!("There was too less arguments.\nExample for starting program: \n'.\\main.exe file_with_coefficients_matrix file_with_y_vector number_of_threads max_iterations_number output_file_name'");
+    if args.len() < 7{
+        println!("There was too less arguments.\nExample for starting program: \n'.\\main.exe file_with_coefficients_matrix file_with_y_vector number_of_threads max_iterations_number output_file_name solving_method'");
         return false;
     }
-    if args.len() > 6{
-        println!("There was too many arguments.\nExample for starting program: \n'.\\main.exe file_with_coefficients_matrix file_with_y_vector number_of_threads max_iterations_number output_file_name'");
+    if args.len() > 7{
+        println!("There was too many arguments.\nExample for starting program: \n'.\\main.exe file_with_coefficients_matrix file_with_y_vector number_of_threads max_iterations_number output_file_name solving_method'");
         return false;
     }
     return true;
