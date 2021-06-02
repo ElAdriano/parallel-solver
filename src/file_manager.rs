@@ -42,6 +42,10 @@ pub fn read(file_name: &str) -> Vec<Vec<f32>> {
         }
 
         for row_element in row_elements{
+            if row_element == ""{
+                println!("Empty line detected. Input file shouldn't contain any empty lines");
+                process::exit(-2);
+            }
             let converted: f32 = row_element.trim().parse().unwrap();
             vector_row.push(converted);
         }

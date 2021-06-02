@@ -1,49 +1,37 @@
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::Barrier;
 
-// jacobi implementation
 pub fn solve_system_of_equations(
-    coefficients_matrix: &Vec<Vec<f32>>, 
-    y_vector: &Vec<Vec<f32>>, 
-    iterations_number: i32, 
+    iterations_number: i32,
     thread_id: i32,
-    all_threads_number: i32,
-    x_results_mutex: Arc< Mutex< Vec<Vec<f32>> > >
+    threads_number: i32,
+    coefficients_matrix: &Vec< Vec<f32> >, 
+    y_vector: &Vec< Vec<f32> >,
+    results_mutex: Arc< Mutex< Vec<Vec<f32>> > >,
+    barrier: Arc< Barrier >
 ){
     // preparing necessary data : matrix M and vector N
     let n_diagonal: Vec<f32> = prepare_n_vector(coefficients_matrix);
     let m_matrix: Vec<Vec<f32>> = prepare_m_matrix(coefficients_matrix, &n_diagonal);
 
     for iteration_number in 1..iterations_number{
-        let mut row_index = thread_id;
-        while row_index < (coefficients_matrix.len() as i32) {
-            let mut x_results = x_results_mutex.lock().unwrap();
+        let mut variable_id = thread_id;
+        while variable_id < y_vector.len() as i32{
+            let mut iterations_results = results_mutex.lock().unwrap();
 
-            x_results[iteration_number as usize][row_index as usize] = n_diagonal[row_index as usize] * y_vector[row_index as usize][0];
+            let mut current_iteration_result: f32 = n_diagonal[variable_id as usize] * y_vector[variable_id as usize][0];
             for j in 0..m_matrix.len(){
-                x_results[iteration_number as usize][row_index as usize] += m_matrix[row_index as usize][j] * x_results[(iteration_number - 1)as usize][j];
+                current_iteration_result += m_matrix[variable_id as usize][j] * iterations_results[(iteration_number - 1) as usize][j];
             }
-            row_index += all_threads_number;
-        }
-        
-        let mut can_continue_calculations: bool = false;
-        while !can_continue_calculations{
-            let results = x_results_mutex.lock().unwrap();
-            can_continue_calculations = can_start_next_iteration(&results[iteration_number as usize]);
-        }
-    }
 
-    //let results = x_results_mutex.lock().unwrap();
-    //println!("Iteration nr {:?},\nValues: {:?}\n", iterations_number, results[(iterations_number - 1) as usize]);
-}
-
-fn can_start_next_iteration(current_iteration_results: &Vec<f32>) -> bool{
-    for i in 0..current_iteration_results.len(){
-        if current_iteration_results[i].is_nan(){
-            return false;
+            iterations_results[iteration_number as usize][variable_id as usize] = current_iteration_result;
+            variable_id += threads_number;
         }
+        barrier.wait();
+
+        // TODO check calculated error -> if it's greater than previous, rewrite previous solutions and exit calculations
     }
-    return true;
 }
 
 // Calculation of M = -N * (L + U)
@@ -72,3 +60,35 @@ fn prepare_n_vector(coefficients_matrix: &Vec<Vec<f32>>) -> Vec<f32>{
     }
     return n_vector;
 }
+
+/*
+pub fn iterate_new_value(
+    coefficients_matrix: &Vec<Vec<f32>>, 
+    y_vector: &Vec<Vec<f32>>, 
+    variable_id: i32,
+    x_results: &Vec<f32>,
+) -> f32 {
+    // preparing necessary data : matrix M and vector N
+    let n_diagonal: Vec<f32> = prepare_n_vector(coefficients_matrix);
+    let m_matrix: Vec<Vec<f32>> = prepare_m_matrix(coefficients_matrix, &n_diagonal);
+
+    let mut result: f32 = n_diagonal[variable_id as usize] * y_vector[variable_id as usize][0];//x_results[iteration_number as usize][variable_id as usize] = n_diagonal[variable_id as usize] * y_vector[variable_id as usize][0];
+    for j in 0..m_matrix.len(){
+        result += m_matrix[variable_id as usize][j] * x_results[j];//x_results[iteration_number as usize][variable_id as usize] += m_matrix[variable_id as usize][j] * x_results[(iteration_number - 1)as usize][j];
+    }
+    return result;
+}
+=====================================================
+for iteration_number in 1..iterations_number{
+    let mut variable_id = thread_id;
+    while variable_id < y_vector.len() as i32{
+        let mut iteration_results = arc_mutex_clone.lock().unwrap();
+        let new_value = jacobi::iterate_new_value(&a_matrix, &y_vector, variable_id, &iteration_results[(iteration_number - 1) as usize]);
+        println!("Thread_id = {:?} | Value: {:?}", thread_id, new_value);
+        iteration_results[iteration_number as usize][variable_id as usize] = new_value;
+        variable_id += threads_number;
+    }
+    println!("Iteration {:?} ended...", iteration_number);
+    barrier_copy.wait();
+}
+*/
