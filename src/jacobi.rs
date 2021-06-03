@@ -29,9 +29,26 @@ pub fn solve_system_of_equations(
             variable_id += threads_number;
         }
         barrier.wait();
+        let iterations_results = results_mutex.lock().unwrap();
+        let current_it_error = calculate_error(coefficients_matrix, &iterations_results[iteration_number as usize], y_vector);
 
-        // TODO check calculated error -> if it's greater than previous, rewrite previous solutions and exit calculations
+        //println!("Error value: {:?}", current_it_error);
+        if current_it_error < 0.00001{
+            return;
+        }
     }
+}
+
+fn calculate_error(coefficients: &Vec< Vec<f32> >, x_values: &Vec<f32>, y_values: &Vec< Vec<f32> >) -> f32 {
+    let mut error: f32 = 0.0;
+    for row_id in 0..coefficients.len(){
+        let mut row_value = 0.0;
+        for i in 0..coefficients[row_id].len(){
+            row_value += coefficients[row_id][i] * x_values[i];
+        }
+        error += (row_value - y_values[row_id][0]) * (row_value - y_values[row_id][0]); 
+    }
+    return error;
 }
 
 // Calculation of M = -N * (L + U)
