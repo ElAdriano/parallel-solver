@@ -32,7 +32,7 @@ pub fn solve_system_of_equations(
         let iterations_results = results_mutex.lock().unwrap();
         let current_it_error = calculate_error(coefficients_matrix, &iterations_results[iteration_number as usize], y_vector);
 
-        //println!("Error value: {:?}", current_it_error);
+        println!("Error value: {:?}", current_it_error);
         if current_it_error < 0.00001{
             return;
         }
