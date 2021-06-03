@@ -1,14 +1,16 @@
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::Barrier;
 
 // gauss-seidel method implementation
 pub fn solve_system_of_equations(
-    coefficients_matrix: &Vec<Vec<f32>>, 
-    y_vector: &Vec<Vec<f32>>, 
-    iterations_number: i32, 
+    iterations_number: i32,
     thread_id: i32,
     all_threads_number: i32,
-    x_results_mutex: Arc< Mutex< Vec<Vec<f32>> > >
+    coefficients_matrix: &Vec< Vec<f32> >, 
+    y_vector: &Vec< Vec<f32> >,
+    x_results_mutex: Arc< Mutex< Vec<Vec<f32>> > >,
+    barrier: Arc< Barrier >
 ){
     // preparing necessary data : N = D^(-1), L and U matrix
     let n_matrix: Vec<Vec<f32>> = prepare_n_matrix(coefficients_matrix); // D^(-1)
@@ -21,45 +23,75 @@ pub fn solve_system_of_equations(
     // proper calculations
     for iteration_number in 1..iterations_number{
         let mut row_index = thread_id;
-        while row_index < (coefficients_matrix.len() as i32) {
-            let mut can_go: bool = false;
-            while !can_go{
-                let results = x_results_mutex.lock().unwrap();
-                can_go = can_make_next_calculations(row_index, &results[iteration_number as usize], &results[(iteration_number - 1) as usize]);
+        while row_index < (y_vector.len() as i32) {
+            //println!("Thread {:?} is waiting for others", thread_id);
+            let mut can_compute = are_all_needed_results_available(iteration_number, &x_results_mutex, row_index);
+            while !can_compute{
+                can_compute = are_all_needed_results_available(iteration_number, &x_results_mutex, row_index);
             }
 
-            let mut x_results = x_results_mutex.lock().unwrap();
+            //println!("Thread {:?} starts calculations for variable nr {:?}", thread_id, row_index);
             let db : f32 = n_matrix[row_index as usize][row_index as usize] * y_vector[row_index as usize][0]; //db
 
             let mut dlx = 0.0;
             for i in 0..row_index as usize{
+                let x_results = x_results_mutex.lock().unwrap();
                 dlx += nl_matrix[row_index as usize][i as usize] * x_results[iteration_number as usize][i as usize]; //res -= l_matrix[row_index as usize][i as usize] * x_results[iteration_number as usize][i as usize];//
             }
 
             let mut dux = 0.0;
             for i in (row_index + 1)..u_matrix.len() as i32{
+                let x_results = x_results_mutex.lock().unwrap();
                 dux += nu_matrix[row_index as usize][i as usize] * x_results[(iteration_number - 1) as usize][i as usize]; //res -= u_matrix[row_index as usize][i as usize] * x_results[iteration_number as usize][i as usize];
             }
-
-            x_results[iteration_number as usize][row_index as usize] = db - dlx - dux;
+            
+            update_result_value(&x_results_mutex, iteration_number, db - dlx - dux, row_index);
             row_index += all_threads_number;
+        }
+        barrier.wait();
+
+        let iterations_results = x_results_mutex.lock().unwrap();
+        let current_it_error = calculate_error(coefficients_matrix, &iterations_results[iteration_number as usize], y_vector);
+        println!("Error value: {:?}", current_it_error);
+
+        if current_it_error < 0.00001{
+            return;
         }
     }
 }
 
-fn can_make_next_calculations(variable_id: i32, current_iteration_results: &Vec<f32>, previous_iteration_results: &Vec<f32>) -> bool {
+fn are_all_needed_results_available(current_iteration_number: i32, mutex: &Arc< Mutex< Vec<Vec<f32>> > >, variable_id: i32) -> bool{
+    let iterations_results = mutex.lock().unwrap();
     for i in 0..variable_id{
-        if current_iteration_results[i as usize].is_nan(){
+        if iterations_results[current_iteration_number as usize][i as usize].is_nan(){
             return false;
         }
     }
 
-    for i in (variable_id + 1)..previous_iteration_results.len() as i32{
-        if previous_iteration_results[i as usize].is_nan(){
+    let previous_it_num: usize = (current_iteration_number - 1) as usize;
+    for i in (variable_id + 1)..iterations_results[previous_it_num].len() as i32{
+        if iterations_results[previous_it_num][i as usize].is_nan(){
             return false;
         }
     }
     return true;
+}
+
+fn update_result_value(mutex: &Arc< Mutex< Vec<Vec<f32>> > >, current_iteration_number: i32, new_value: f32, variable_id: i32){
+    let mut x_results = mutex.lock().unwrap();
+    x_results[current_iteration_number as usize][variable_id as usize] = new_value;
+}
+
+fn calculate_error(coefficients: &Vec< Vec<f32> >, x_values: &Vec<f32>, y_values: &Vec< Vec<f32> >) -> f32 {
+    let mut error: f32 = 0.0;
+    for row_id in 0..coefficients.len(){
+        let mut row_value = 0.0;
+        for i in 0..coefficients[row_id].len(){
+            row_value += coefficients[row_id][i] * x_values[i];
+        }
+        error += (row_value - y_values[row_id][0]) * (row_value - y_values[row_id][0]); 
+    }
+    return error;
 }
 
 fn multiply_matrices(first_matrix: Vec<Vec<f32>>, second_matrix: Vec<Vec<f32>>) -> Vec<Vec<f32>>{
@@ -71,6 +103,7 @@ fn multiply_matrices(first_matrix: Vec<Vec<f32>>, second_matrix: Vec<Vec<f32>>) 
             for i in 0..first_matrix[row].len(){
                 tmp += first_matrix[row][i] * second_matrix[i][column];
             }
+            tmp = (1000.0 * tmp).round() / 1000.0;
             new_matrix_row.push(tmp);
         }
         result_matrix.push(new_matrix_row);
@@ -126,7 +159,8 @@ fn prepare_n_matrix(coefficients_matrix: &Vec<Vec<f32>>) -> Vec<Vec<f32>>{
         let mut row = Vec::new();
         for column_num in 0..coefficients_matrix.len(){
             if row_num == column_num{
-                row.push( 1.0 / coefficients_matrix[row_num][column_num] );
+                let rounded: f32 = (1000.0 / coefficients_matrix[row_num][column_num]).round() / 1000.0;
+                row.push(rounded);
             }
             else{
                 row.push(0.0);
