@@ -13,12 +13,14 @@ pub fn read(file_name: &str) -> Vec<Vec<f32>> {
     let file_content = fs::read_to_string(file_name).expect("");
 
     if file_content.len() == 0{
+        println!("File '{}' is empty", file_name);
         process::exit(-2);
     }
 
     let rows : Vec<&str> = file_content.split('\n').collect();
 
     if rows.len() == 0 {
+        println!("File '{}' is empty", file_name);
         process::exit(-2);
     }
 
