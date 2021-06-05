@@ -62,7 +62,7 @@ pub fn write(file_name: &str, content: &Vec<f32>){
 
     let saving_result = fs::write(file_name, file_content);
     match saving_result{
-        Ok(_file) => { println!("Saving results to file ended successfully :)"); },
+        Ok(_file) => { },
         Err(_error) => { 
             println!("An error occurred while saving results to file. That's all I know :("); 
             process::exit(-2);

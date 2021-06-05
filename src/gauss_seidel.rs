@@ -24,13 +24,11 @@ pub fn solve_system_of_equations(
     for iteration_number in 1..iterations_number{
         let mut row_index = thread_id;
         while row_index < (y_vector.len() as i32) {
-            //println!("Thread {:?} is waiting for others", thread_id);
             let mut can_compute = are_all_needed_results_available(iteration_number, &x_results_mutex, row_index);
             while !can_compute{
                 can_compute = are_all_needed_results_available(iteration_number, &x_results_mutex, row_index);
             }
 
-            //println!("Thread {:?} starts calculations for variable nr {:?}", thread_id, row_index);
             let db : f32 = n_matrix[row_index as usize][row_index as usize] * y_vector[row_index as usize][0]; //db
 
             let mut dlx = 0.0;
