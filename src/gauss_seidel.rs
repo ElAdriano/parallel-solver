@@ -29,18 +29,18 @@ pub fn solve_system_of_equations(
                 can_compute = are_all_needed_results_available(iteration_number, &x_results_mutex, row_index);
             }
 
-            let db : f32 = n_matrix[row_index as usize][row_index as usize] * y_vector[row_index as usize][0]; //db
+            let db : f32 = n_matrix[row_index as usize][row_index as usize] * y_vector[row_index as usize][0];
 
             let mut dlx = 0.0;
             for i in 0..row_index as usize{
                 let x_results = x_results_mutex.lock().unwrap();
-                dlx += nl_matrix[row_index as usize][i as usize] * x_results[iteration_number as usize][i as usize]; //res -= l_matrix[row_index as usize][i as usize] * x_results[iteration_number as usize][i as usize];//
+                dlx += nl_matrix[row_index as usize][i as usize] * x_results[iteration_number as usize][i as usize];
             }
 
             let mut dux = 0.0;
             for i in (row_index + 1)..u_matrix.len() as i32{
                 let x_results = x_results_mutex.lock().unwrap();
-                dux += nu_matrix[row_index as usize][i as usize] * x_results[(iteration_number - 1) as usize][i as usize]; //res -= u_matrix[row_index as usize][i as usize] * x_results[iteration_number as usize][i as usize];
+                dux += nu_matrix[row_index as usize][i as usize] * x_results[(iteration_number - 1) as usize][i as usize];
             }
             
             update_result_value(&x_results_mutex, iteration_number, db - dlx - dux, row_index);
@@ -147,11 +147,6 @@ fn prepare_l_matrix(coefficients_matrix: &Vec<Vec<f32>>) -> Vec<Vec<f32>>{
 
 // Calculation of N = D^(-1)
 fn prepare_n_matrix(coefficients_matrix: &Vec<Vec<f32>>) -> Vec<Vec<f32>>{
-    /*let mut n_vector = Vec::new();
-    for i in 0..coefficients_matrix.len(){
-        n_vector.push( 1.0 / (coefficients_matrix[i][i] as f32) );
-    }
-    return n_vector;*/
     let mut n_matrix = Vec::new();
     for row_num in 0..coefficients_matrix.len(){
         let mut row = Vec::new();

@@ -77,35 +77,3 @@ fn prepare_n_vector(coefficients_matrix: &Vec<Vec<f32>>) -> Vec<f32>{
     }
     return n_vector;
 }
-
-/*
-pub fn iterate_new_value(
-    coefficients_matrix: &Vec<Vec<f32>>, 
-    y_vector: &Vec<Vec<f32>>, 
-    variable_id: i32,
-    x_results: &Vec<f32>,
-) -> f32 {
-    // preparing necessary data : matrix M and vector N
-    let n_diagonal: Vec<f32> = prepare_n_vector(coefficients_matrix);
-    let m_matrix: Vec<Vec<f32>> = prepare_m_matrix(coefficients_matrix, &n_diagonal);
-
-    let mut result: f32 = n_diagonal[variable_id as usize] * y_vector[variable_id as usize][0];//x_results[iteration_number as usize][variable_id as usize] = n_diagonal[variable_id as usize] * y_vector[variable_id as usize][0];
-    for j in 0..m_matrix.len(){
-        result += m_matrix[variable_id as usize][j] * x_results[j];//x_results[iteration_number as usize][variable_id as usize] += m_matrix[variable_id as usize][j] * x_results[(iteration_number - 1)as usize][j];
-    }
-    return result;
-}
-=====================================================
-for iteration_number in 1..iterations_number{
-    let mut variable_id = thread_id;
-    while variable_id < y_vector.len() as i32{
-        let mut iteration_results = arc_mutex_clone.lock().unwrap();
-        let new_value = jacobi::iterate_new_value(&a_matrix, &y_vector, variable_id, &iteration_results[(iteration_number - 1) as usize]);
-        println!("Thread_id = {:?} | Value: {:?}", thread_id, new_value);
-        iteration_results[iteration_number as usize][variable_id as usize] = new_value;
-        variable_id += threads_number;
-    }
-    println!("Iteration {:?} ended...", iteration_number);
-    barrier_copy.wait();
-}
-*/
